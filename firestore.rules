@@ -1,0 +1,273 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Global Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSignedInVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedInVerified() && request.auth.uid == userId;
+    }
+
+    function isBootstrapAdmin() {
+      return isSignedInVerified()
+        && 'email' in request.auth.token
+        && request.auth.token.email is string
+        && request.auth.token.email.lower() == 'zezoelhusseiny2012@gmail.com';
+    }
+
+    function isAdmin() {
+      return isBootstrapAdmin() || (
+        isSignedInVerified() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isAssignedDriver() {
+      return isSignedInVerified()
+        && 'email' in request.auth.token
+        && request.auth.token.email is string
+        && exists(/databases/$(database)/documents/drivers/primary)
+        && get(/databases/$(database)/documents/drivers/primary).data.email is string
+        && get(/databases/$(database)/documents/drivers/primary).data.email.lower() == request.auth.token.email.lower();
+    }
+
+    function isDriverOrAdmin() {
+      return isAdmin() || isAssignedDriver();
+    }
+
+    // 3. Entity Validation Blueprints
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'email', 'photoURL', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid == request.auth.uid && data.uid == userId && isValidId(data.uid)
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['email', 'createdAt'])
+        && data.keys().hasOnly(['email', 'createdAt'])
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && data.createdAt is timestamp;
+    }
+
+    function isValidPricingSettings(data) {
+      return data.keys().hasAll(['base_fare', 'per_km_rate', 'minimum_fare', 'buffer_minutes', 'updatedAt'])
+        && data.keys().hasOnly(['base_fare', 'per_km_rate', 'minimum_fare', 'buffer_minutes', 'updatedAt'])
+        && data.base_fare is number && data.base_fare >= 0 && data.base_fare <= 5000
+        && data.per_km_rate is number && data.per_km_rate >= 0 && data.per_km_rate <= 1000
+        && data.minimum_fare is number && data.minimum_fare >= 0 && data.minimum_fare <= 5000
+        && data.buffer_minutes is number && data.buffer_minutes >= 0 && data.buffer_minutes <= 240
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidDriverProfile(data) {
+      return data.keys().hasAll(['full_name', 'email', 'phone', 'whatsapp', 'plate', 'available', 'updatedAt'])
+        && data.keys().hasOnly(['full_name', 'email', 'phone', 'whatsapp', 'plate', 'available', 'updatedAt'])
+        && data.full_name is string && data.full_name.size() >= 1 && data.full_name.size() <= 120
+        && data.email is string && data.email.size() >= 3 && data.email.size() <= 200
+        && data.phone is string && data.phone.size() <= 30
+        && data.whatsapp is string && data.whatsapp.size() <= 30
+        && data.plate is string && data.plate.size() <= 40
+        && data.available is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll([
+          'code', 'customerId', 'customer_name', 'phone', 'notes',
+          'pickup_label', 'pickup_lat', 'pickup_lng',
+          'destination_label', 'destination_lat', 'destination_lng',
+          'distance_km', 'duration_min', 'fare',
+          'when_mode', 'requested_time', 'status',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'code', 'customerId', 'customerEmail', 'customer_name', 'phone', 'notes',
+          'pickup_label', 'pickup_lat', 'pickup_lng',
+          'destination_label', 'destination_lat', 'destination_lng',
+          'distance_km', 'duration_min', 'fare',
+          'when_mode', 'requested_time', 'status',
+          'driverName', 'driverPhone', 'driverWhatsapp', 'driverPlate',
+          'createdAt', 'updatedAt'
+        ])
+        && data.code is string && data.code.size() >= 4 && data.code.size() <= 24 && data.code.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.customerId is string && isValidId(data.customerId)
+        && (!('customerEmail' in data) || (data.customerEmail is string && data.customerEmail.size() <= 200))
+        && data.customer_name is string && data.customer_name.size() >= 1 && data.customer_name.size() <= 100
+        && data.phone is string && data.phone.size() >= 6 && data.phone.size() <= 25
+        && data.notes is string && data.notes.size() <= 500
+        && data.pickup_label is string && data.pickup_label.size() >= 1 && data.pickup_label.size() <= 300
+        && data.pickup_lat is number && data.pickup_lat >= -90 && data.pickup_lat <= 90
+        && data.pickup_lng is number && data.pickup_lng >= -180 && data.pickup_lng <= 180
+        && data.destination_label is string && data.destination_label.size() >= 1 && data.destination_label.size() <= 300
+        && data.destination_lat is number && data.destination_lat >= -90 && data.destination_lat <= 90
+        && data.destination_lng is number && data.destination_lng >= -180 && data.destination_lng <= 180
+        && data.distance_km is number && data.distance_km >= 0 && data.distance_km <= 2000
+        && data.duration_min is number && data.duration_min >= 0 && data.duration_min <= 2000
+        && data.fare is number && data.fare >= 0 && data.fare <= 50000
+        && data.when_mode in ['now', 'later']
+        && data.requested_time is string && data.requested_time.size() >= 1 && data.requested_time.size() <= 50
+        && data.status in ['pending', 'accepted', 'declined', 'completed', 'cancelled']
+        && (!('driverName' in data) || (data.driverName is string && data.driverName.size() <= 120))
+        && (!('driverPhone' in data) || (data.driverPhone is string && data.driverPhone.size() <= 30))
+        && (!('driverWhatsapp' in data) || (data.driverWhatsapp is string && data.driverWhatsapp.size() <= 30))
+        && (!('driverPlate' in data) || (data.driverPlate is string && data.driverPlate.size() <= 40))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // 4. Collection Rules
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isOwner(userId)
+        && isValidUserProfile(incoming(), userId)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'photoURL', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId)
+        && (isBootstrapAdmin() || isAdmin())
+        && isValidAdminRecord(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(userId)
+        && isAdmin()
+        && userId != request.auth.uid
+        && (!('email' in existing()) || !(existing().email is string) || existing().email.lower() != 'zezoelhusseiny2012@gmail.com');
+    }
+
+    match /settings/{settingId} {
+      allow get: if isValidId(settingId) && settingId == 'pricing';
+      allow list: if false;
+      allow create: if isValidId(settingId)
+        && settingId == 'pricing'
+        && isAdmin()
+        && isValidPricingSettings(incoming())
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(settingId)
+        && settingId == 'pricing'
+        && isAdmin()
+        && isValidPricingSettings(incoming())
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['base_fare', 'per_km_rate', 'minimum_fare', 'buffer_minutes', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /drivers/{driverId} {
+      allow get: if isValidId(driverId) && driverId == 'primary' && isDriverOrAdmin();
+      allow list: if false;
+      allow create: if isValidId(driverId)
+        && driverId == 'primary'
+        && isAdmin()
+        && isValidDriverProfile(incoming())
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(driverId)
+        && driverId == 'primary'
+        && isValidDriverProfile(incoming())
+        && incoming().updatedAt == request.time
+        && (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['full_name', 'email', 'phone', 'whatsapp', 'plate', 'available', 'updatedAt'])) ||
+          (isAssignedDriver() && incoming().diff(existing()).affectedKeys().hasOnly(['available', 'updatedAt']))
+        );
+      allow delete: if false;
+    }
+
+    match /bookings/{bookingId} {
+      allow get: if isValidId(bookingId)
+        && isSignedInVerified()
+        && (existing().customerId == request.auth.uid || isDriverOrAdmin());
+
+      allow list: if isSignedInVerified()
+        && (resource.data.customerId == request.auth.uid || isDriverOrAdmin());
+
+      allow create: if isValidId(bookingId)
+        && isSignedInVerified()
+        && isValidBooking(incoming())
+        && incoming().code == bookingId
+        && incoming().customerId == request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isValidId(bookingId)
+        && isSignedInVerified()
+        && isValidBooking(incoming())
+        && incoming().code == existing().code
+        && incoming().customerId == existing().customerId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action 1: Customer cancels their own pending booking
+          (
+            existing().customerId == request.auth.uid
+            && existing().status == 'pending'
+            && incoming().status == 'cancelled'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          ) ||
+          // Action 2: Driver or Admin accepts or declines a pending booking
+          (
+            isDriverOrAdmin()
+            && existing().status == 'pending'
+            && incoming().status in ['accepted', 'declined']
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'driverName', 'driverPhone', 'driverWhatsapp', 'driverPlate', 'updatedAt'])
+          ) ||
+          // Action 3: Driver or Admin marks an accepted booking as completed
+          (
+            isDriverOrAdmin()
+            && existing().status == 'accepted'
+            && incoming().status == 'completed'
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])
+          ) ||
+          // Action 4: Admin override
+          (
+            isAdmin()
+            && incoming().status in ['pending', 'accepted', 'declined', 'completed', 'cancelled']
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'driverName', 'driverPhone', 'driverWhatsapp', 'driverPlate', 'updatedAt'])
+          )
+        );
+
+      allow delete: if false;
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Special Taxi",
+  "description": "Book a Special Taxi ride in Mansoura — live route, fixed fare, one trusted driver.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

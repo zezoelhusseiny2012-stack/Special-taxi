@@ -1,0 +1,266 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user account details stored privately for the signed-in user.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        },
+        "photoURL": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "displayName", "email", "createdAt", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted operations administrator lookup document.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["email", "createdAt"]
+    },
+    "PricingSettings": {
+      "title": "PricingSettings",
+      "description": "Fare calculation parameters and ride buffer minutes.",
+      "type": "object",
+      "properties": {
+        "base_fare": {
+          "type": "number"
+        },
+        "per_km_rate": {
+          "type": "number"
+        },
+        "minimum_fare": {
+          "type": "number"
+        },
+        "buffer_minutes": {
+          "type": "number"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["base_fare", "per_km_rate", "minimum_fare", "buffer_minutes", "updatedAt"]
+    },
+    "DriverProfile": {
+      "title": "DriverProfile",
+      "description": "Assigned driver profile, contact details, vehicle plate, and availability status.",
+      "type": "object",
+      "properties": {
+        "full_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "maxLength": 200
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "whatsapp": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "plate": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "available": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["full_name", "email", "phone", "whatsapp", "plate", "available", "updatedAt"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "A Special Taxi ride booking in Mansoura.",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 24,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerEmail": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "customer_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 25
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "pickup_label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "pickup_lat": {
+          "type": "number"
+        },
+        "pickup_lng": {
+          "type": "number"
+        },
+        "destination_label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "destination_lat": {
+          "type": "number"
+        },
+        "destination_lng": {
+          "type": "number"
+        },
+        "distance_km": {
+          "type": "number"
+        },
+        "duration_min": {
+          "type": "number"
+        },
+        "fare": {
+          "type": "number"
+        },
+        "when_mode": {
+          "type": "string",
+          "enum": ["now", "later"]
+        },
+        "requested_time": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "accepted", "declined", "completed", "cancelled"]
+        },
+        "driverName": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "driverPhone": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "driverWhatsapp": {
+          "type": "string",
+          "maxLength": 30
+        },
+        "driverPlate": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "code",
+        "customerId",
+        "customer_name",
+        "phone",
+        "notes",
+        "pickup_label",
+        "pickup_lat",
+        "pickup_lng",
+        "destination_label",
+        "destination_lat",
+        "destination_lng",
+        "distance_km",
+        "duration_min",
+        "fare",
+        "when_mode",
+        "requested_time",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user profile documents keyed by Firebase Auth UID."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Operations administrators authorized to edit pricing, driver configuration, and all bookings."
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/PricingSettings" },
+      "description": "Global pricing and schedule buffer configuration (document ID: pricing)."
+    },
+    "/drivers/{driverId}": {
+      "schema": { "$ref": "#/entities/DriverProfile" },
+      "description": "Configured driver account and vehicle metadata (document ID: primary)."
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Ride bookings keyed by booking reference code (e.g. ST-482910)."
+    }
+  }
+}
