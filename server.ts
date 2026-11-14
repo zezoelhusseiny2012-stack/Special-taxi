@@ -1,8 +1,10 @@
-import "dotenv/config";
+import dotenv from "dotenv";
 import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { GoogleGenAI } from "@google/genai";
+
+dotenv.config({ path: [".env.development.local", ".env.local", ".env"], quiet: true });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT) || 3000;
